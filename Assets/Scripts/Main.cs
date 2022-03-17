@@ -4,7 +4,8 @@ public class Main : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private CameraMover _cameraMover;
-    [SerializeField] private ObjectSelector _selector;
+    [SerializeField] private Game _game;
+    [SerializeField] private ConnectableController _connectableController;
 
     [Header("Settings")]
     [SerializeField] private float _radius = 10;
@@ -12,26 +13,18 @@ public class Main : MonoBehaviour
     [SerializeField] private int _objectCount = 10;
 
     private PlayerInput _playerInput;
-    private ConnectableController _connectableController;
 
     private void Start()
     {
         _playerInput = new PlayerInput();
-        _connectableController = new ConnectableController();
-        GenerateConnectables();
+        _connectableController.GenerateConnectables(_prefab, _objectCount, transform.position, _radius);
 
         _cameraMover.Init(_playerInput);
-        _selector.Init(_playerInput, _connectableController);
+        _game.Init(_playerInput, _connectableController);
     }
 
-    private void GenerateConnectables()
+    private void Update()
     {
-        for (int i = 0; i < _objectCount; i++)
-        {
-            Vector3 newObjectPosition = Random.insideUnitSphere * _radius;
-            newObjectPosition.y = 0;
-            Connectable newObject = Instantiate(_prefab, newObjectPosition, Quaternion.identity);
-            _connectableController.AddConnectable(newObject);
-        }
+        _game.CustomUpdate(Time.deltaTime);
     }
 }

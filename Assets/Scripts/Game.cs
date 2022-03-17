@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public class ObjectSelector : MonoBehaviour, ISelectableVisitor
+public class Game : MonoBehaviour, ISelectableVisitor, IUpdateable
 {
     [SerializeField] private Camera _camera;
     [SerializeField] private Transform _pointerObject;
@@ -14,102 +14,29 @@ public class ObjectSelector : MonoBehaviour, ISelectableVisitor
     private PlayerInput _input;
     private Plane _plane;
 
-    private void Update()
+    public void CustomUpdate(float deltaTime)
     {
+        RaycastHit hit;
+        Ray ray;
+        ProduceRaycast(out hit, out ray);
+
         if (_input.PointerDown)
-            SelectObject();
+            HandlePointerDown(ray, hit);
 
         if (_input.PointerHold)
-            MoveObject();
+            HandlePointerHold(ray, hit);
 
         if (_input.PointerUp)
-            DeselectObject();
+            HandlePointerUp(ray, hit);
 
-        _lineController.CustomUpdate();
+        _lineController.CustomUpdate(deltaTime);
     }
-
+    
     public void Init(PlayerInput input, ConnectableController connectableController)
     {
         _input = input;
         _connectableController = connectableController;
         _plane = new Plane(Vector3.up, Vector3.zero);
-    }
-
-    private void MoveObject()
-    {
-        Ray ray = _camera.ScreenPointToRay(_input.PointerScreenPosition);
-
-        float distance;
-        _plane.Raycast(ray, out distance);
-        Vector3 pointerPosition = ray.GetPoint(distance);
-
-        if (_currentConnectable)
-            _currentConnectable.Move(pointerPosition);
-
-        if (_currentLine)
-        {
-
-            RaycastHit hit;
-            Connector connector;
-            if (Physics.Raycast(ray, out hit) == false || hit.collider.TryGetComponent(out connector) == false)
-            {
-                _pointerObject.position = pointerPosition;
-                _currentLine.SetEndPoint(_pointerObject);
-
-                if (_hoveredConnector != _selectedConnector)
-                    _hoveredConnector?.Unselect();
-                
-                _hoveredConnector = null;
-                return;
-            }
-
-            if (_hoveredConnector != _selectedConnector)
-                _hoveredConnector?.Unselect();
-
-            _hoveredConnector = connector;
-            _hoveredConnector.Select();
-
-            _pointerObject.position = connector.transform.position;
-            _currentLine.SetEndPoint(_pointerObject);
-        }
-    }
-
-    private void DeselectObject()
-    {
-        _currentConnectable = null;
-
-        if (_currentLine)
-        {
-            Ray ray = _camera.ScreenPointToRay(_input.PointerScreenPosition);
-
-            RaycastHit hit;
-            Connector connector;
-            if (Physics.Raycast(ray, out hit) == false || hit.collider.TryGetComponent(out connector) == false)
-            {
-                ResetConnector();
-            }
-            else if (connector != _selectedConnector)
-            {
-                _currentLine.SetEndPoint(connector.transform);
-                ResetConnector(false);
-            }
-        }
-    }
-
-    private void SelectObject()
-    {
-        Ray ray = _camera.ScreenPointToRay(_input.PointerScreenPosition);
-
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit) == false)
-        {
-            ResetConnector();
-            return;
-        }
-
-        Selectable selected = hit.collider.GetComponent<Selectable>();
-        if (selected)
-            selected.Accept(this);
     }
 
     public void Visit(Platform platform)
@@ -142,6 +69,77 @@ public class ObjectSelector : MonoBehaviour, ISelectableVisitor
         }
     }
 
+    private void HandlePointerDown(Ray ray, RaycastHit hit)
+    {
+        if (hit.collider == null)
+        {
+            ResetConnector();
+            return;
+        }
+
+        Selectable selected = hit.collider.GetComponent<Selectable>();
+        if (selected)
+            selected.Accept(this);
+    }
+
+    private void HandlePointerHold(Ray ray, RaycastHit hit)
+    {
+        float distance;
+        _plane.Raycast(ray, out distance);
+        Vector3 pointerPosition = ray.GetPoint(distance);
+
+        // handle platform
+        if (_currentConnectable)
+            _currentConnectable.Move(pointerPosition);
+
+        // handle line
+        if (_currentLine)
+        {
+            Connector connector;
+            if (hit.collider == null || hit.collider.TryGetComponent(out connector) == false)
+            {
+                _pointerObject.position = pointerPosition;
+                _currentLine.SetEndPoint(_pointerObject);
+
+                if (_hoveredConnector != _selectedConnector)
+                    _hoveredConnector?.Unselect();
+                
+                _hoveredConnector = null;
+                return;
+            }
+
+            if (_hoveredConnector != _selectedConnector)
+                _hoveredConnector?.Unselect();
+
+            _hoveredConnector = connector;
+            _hoveredConnector.Select();
+
+            _pointerObject.position = connector.transform.position;
+            _currentLine.SetEndPoint(_pointerObject);
+        }
+    }
+
+    private void HandlePointerUp(Ray ray, RaycastHit hit)
+    {
+        // handle platform
+        _currentConnectable = null;
+
+        // handle line
+        if (_currentLine)
+        {
+            Connector connector;
+            if (hit.collider == null || hit.collider.TryGetComponent(out connector) == false)
+            {
+                ResetConnector();
+            }
+            else if (connector != _selectedConnector)
+            {
+                _currentLine.SetEndPoint(connector.transform);
+                ResetConnector(false);
+            }
+        }
+    }
+
     private void ResetConnector(bool removeLine = true)
     {
         _connectableController.DeselectAll();
@@ -152,5 +150,11 @@ public class ObjectSelector : MonoBehaviour, ISelectableVisitor
             _lineController.RemoveLine(_currentLine);
 
         _currentLine = null;
+    }
+
+    private void ProduceRaycast(out RaycastHit hit, out Ray ray)
+    {
+        ray = _camera.ScreenPointToRay(_input.PointerScreenPosition);
+        Physics.Raycast(ray, out hit);
     }
 }

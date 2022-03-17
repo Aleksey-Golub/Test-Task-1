@@ -1,16 +1,16 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class LineController : MonoBehaviour
+public class LineController : MonoBehaviour, IUpdateable
 {
     [SerializeField] private Line _linePrefab;
 
     private List<Line> _lines = new List<Line>();
 
-    public void CustomUpdate()
+    public void CustomUpdate(float deltaTime)
     {
         foreach (var line in _lines)
-            line.CustomUpdate();
+            line.CustomUpdate(deltaTime);
     }
 
     public Line GetLine(Transform startPoint)

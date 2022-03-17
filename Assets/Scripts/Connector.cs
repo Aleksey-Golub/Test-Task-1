@@ -14,11 +14,6 @@ public class Connector : Selectable
         _defaultMaterial = _meshRenderer.material;
     }
 
-    private void SetMaterial(Material newMaterial)
-    {
-        _meshRenderer.material = newMaterial;
-    }
-
     public void Select()
     {
         SetMaterial(_selectedMaterial);
@@ -37,5 +32,10 @@ public class Connector : Selectable
     public override void Accept(ISelectableVisitor visitor)
     {
         visitor.Visit(this);
+    }
+
+    private void SetMaterial(Material newMaterial)
+    {
+        _meshRenderer.material = newMaterial;
     }
 }
