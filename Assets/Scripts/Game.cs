@@ -7,11 +7,11 @@ public class Game : MonoBehaviour, ISelectableVisitor, IUpdateable
     [SerializeField] private LineController _lineController;
 
     private ConnectableController _connectableController;
+    private PlayerInput _input;
     private Line _currentLine;
     private Connectable _currentConnectable;
     private Connector _selectedConnector;
     private Connector _hoveredConnector;
-    private PlayerInput _input;
     private Plane _plane;
 
     public void CustomUpdate(float deltaTime)
